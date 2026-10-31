@@ -1,0 +1,42 @@
+name: build
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 240
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Clone xboxrecomp toolkit
+        run: git clone --depth 1 https://github.com/sp00nznet/xboxrecomp.git xboxrecomp
+
+      - name: Configure (CMake + MSVC x64)
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+
+      - name: Build (Release)
+        run: cmake --build build --config Release
+
+      - name: Verify output
+        shell: pwsh
+        run: |
+          $exe = "build/Release/mercenaries_recomp.exe"
+          if (!(Test-Path $exe)) { throw "Executable not found at $exe" }
+          Get-Item $exe | Format-List Name, Length, LastWriteTime
+
+      - name: Upload executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: mercenaries-recomp
+          path: |
+            build/Release/mercenaries_recomp.exe
+            build/Release/*.pdb
+          if-no-files-found: error

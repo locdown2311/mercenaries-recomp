@@ -1,0 +1,23 @@
+# build output
+build/
+out/
+*.obj
+*.pdb
+*.ilk
+*.exe
+*.lib
+*.exp
+
+# game files (never commit a game dump)
+game/
+*.xbe
+*.iso
+*.xiso
+
+# toolchain clones
+xboxrecomp/
+
+# python / tooling
+__pycache__/
+*.pyc
+.venv/
