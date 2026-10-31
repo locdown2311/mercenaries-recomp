@@ -356,7 +356,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     /* Step 4: Set game directory for file I/O path translation */
     {
         extern void xbox_path_init(const char *game_dir, const char *save_dir);
-        xbox_path_init(YOUR_GAME_DIR, NULL);
+        /* Self-contained: saves, caches and the partition images live next to
+         * the game instead of %LOCALAPPDATA%, so each copy is isolated and the
+         * runtime can create them from wherever the port is unpacked. */
+        xbox_path_init(YOUR_GAME_DIR, "saves");
     }
 
     /* Step 5: Initialize kernel bridge (thunk table in Xbox memory) */
