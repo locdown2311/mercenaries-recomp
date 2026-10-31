@@ -4,10 +4,10 @@ Native PC port of **Mercenaries** (Pandemic Studios / LucasArts, 2005) for the o
 Xbox, built by **static recompilation** of its `default.xbe` with
 [xboxrecomp](https://github.com/sp00nznet/xboxrecomp) (x86 → C → native x86-64 `.exe`).
 
-> **Status: pipeline complete, first build via CI. The game does not boot yet.**
-> This repo contains the machine-translated C code (16,663 functions, ~1.56M lines)
-> and the project needed to compile it. Bring-up (making it reach the first frame)
-> is the next phase.
+> **Status: pipeline complete, CI build working, first boot reached the game's
+> media check.** The recompiled executable runs the CRT and real kernel calls;
+> bring-up continues from the partition/media path. See **[STATUS.md](STATUS.md)**
+> for what is done, what is left and how to resume.
 
 ## What is in here
 
