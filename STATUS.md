@@ -1,19 +1,19 @@
 # STATUS DO PORT — Mercenaries (Xbox) → PC nativo
 
-> **Última atualização:** 2026-10-31 · **Commit base:** `4cfc03f` · CI run #3 em andamento
+> **Última atualização:** 2026-10-31 · **Commit base:** `4cfc03f` · CI run #3 concluído ✅
 > **Repositório:** https://github.com/locdown2311/mercenaries-recomp
 > **Documento de retomada:** leia isto antes de continuar.
 
 ## TL;DR
 
-O jogo **compila no GitHub Actions** e o executável gerado **já boota**:
-executa o CRT, faz ~16 chamadas de kernel, cria thread, aloca memória e
-chega à checagem de mídia (`\Device\Harddisk0\Partition1\`), onde saía
-via `HalReturnToFirmware` por falta das imagens de partição. A correção
-(save-dir `saves/` ao lado do jogo) está commitada e recompilando.
+O jogo **compila no GitHub Actions** e o executável gerado **roda**: passa
+do media check (imagens de partição no `saves/`), inicializa GPU/áudio e
+**entra no loop principal** com `RECOMP_VBLANK=1` (~40 Hz de vblanks,
+centenas de chamadas de kernel).
 
-**Estado:** pipeline completa + build CI + primeiro boot real. Próximo
-objetivo: passar do media check e chegar à carga de assets / D3D8.
+**Estado:** pipeline completa + build CI + o jogo **passa do media check e
+entra no loop principal** com `RECOMP_VBLANK=1`. Próximo objetivo: render
+D3D8 e carga de assets.
 
 ---
 
@@ -78,17 +78,33 @@ checagem de mídia (comportamento "sem disco").
 | `d8896e4` | `ci: use msvc-dev-cmd + Ninja` — o generator "Visual Studio 17 2022" não existe no runner |
 | `4cfc03f` | `runtime: keep saves ... next to the game` — save-dir `saves/` em vez de `%LOCALAPPDATA%` |
 
+### 1.7 Segundo boot — passou do media check (build `4cfc03f`)
+Com o save-dir `saves/` ao lado do jogo, o runtime criou `Partition0.img`
+(tabela de partições) + `Partition1..5.img` e o jogo **passou da checagem de
+mídia** (TDATA/UDATA/TitleMeta.xbx) e foi até o init de vídeo
+(`AvSendTVEncoderOption`) e GPU/áudio (`KeConnectInterrupt`).
+
+O frame loop ainda parava no primeiro clear — até rodar com **`RECOMP_VBLANK=1`**:
+```
+[NV2A] vblank -> ISR claimed it
+[NV2A] vblank 600 (tick): last 600 in 15156 ms   (~40 Hz)
+[KERNEL] summary: 1758 total calls, latest ordinal 119 (slot 54)
+```
+Agora o jogo **fica no loop principal** (não sai, não trava mais na saída).
+Próximo: confirmar render (D3D8) e carga de assets/DATAxbox.
+
 ---
 
 ## 2. O que falta fazer
 
 ### 2.1 Curto prazo (destravar o boot)
-1. **Confirmar** que o build `4cfc03f` (run #3) passa do media check.
-2. **Dados do jogo**: o exe carrega `game\default.xbe` e lê assets de `game\`
+1. ~~Confirmar que o build `4cfc03f` passa do media check~~ ✅ (ver 1.7).
+2. **Rodar sempre com `RECOMP_VBLANK=1`** — sem isso o frame loop para no primeiro clear.
+3. **Dados do jogo**: o exe carrega `game\default.xbe` e lê assets de `game\`
    (via `xbox_path_init(game, "saves")`). É preciso o dump completo em `game/`
-   (`default.xbe` + `DATAxbox/` + configs). Alternativa de teste: junction
+   (`default.xbe` + `DATAxbox/` + configs). Na máquina de teste usei junction
    `game -> mercenaries/extracted`.
-3. Observar o **próximo ponto de falha** (provavelmente carga de assets/D3D8).
+4. Observar o **próximo ponto de falha**: render D3D8 / carga de assets.
 
 ### 2.2 Médio prazo
 4. **Ordinais de kernel não implementados**: o log mostra
@@ -131,8 +147,8 @@ Basta dar **push em `main`** (ou Actions → *Run workflow*). O workflow clona o
      mercenaries_recomp.exe
      saves/           <- criado pelo runtime
    ```
-4. Rodar com `XBOX_LOG_LEVEL=4` para log detalhado (vai para `xbox_kernel.log`
-   no cwd; erros também vão para stderr).
+4. Rodar com `XBOX_LOG_LEVEL=4` e **`RECOMP_VBLANK=1`** (sem vblank o loop para);
+   log detalhado vai para `xbox_kernel.log` no cwd; erros também vão para stderr.
 5. Ferramentas de debug úteis: `RECOMP_STUB_LOG=1`, `RECOMP_WATCH=<va>`,
    `RECOMP_ICALL_TRACE`, watchdog `RECOMP_WATCHDOG_SECS`.
 
